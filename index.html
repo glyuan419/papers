@@ -1,1 +1,743 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20x='6'%20y='9'%20width='23'%20height='46'%20rx='5'%20fill='%23b31b1b'/%3E%3Crect%20x='35'%20y='9'%20width='23'%20height='46'%20rx='5'%20fill='%23b31b1b'%20fill-opacity='0.58'/%3E%3C/svg%3E">
+  <title>Universal Bilingual Reader</title>
+  <style>
+    :root {
+      --bg-app: #f6f7f9;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f1f3f6;
+      --text-primary: #1a1d21;
+      --text-secondary: #4b5563;
+      --text-muted: #6b7280;
+      --border-hairline: #e5e7eb;
+      --border-strong: #cbd5e1;
+      --accent: #b31b1b;
+      --accent-soft: rgba(179, 27, 27, 0.08);
+      --accent-ring: rgba(179, 27, 27, 0.22);
+      --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+      --shadow-hover: 0 6px 18px rgba(15, 23, 42, 0.08);
+      --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      --font-serif: Georgia, "Times New Roman", "Source Han Serif SC", "Noto Serif CJK SC", serif;
+    }
 
+    html[data-theme="sepia"] {
+      --bg-app: #f3ede0;
+      --bg-surface: #faf6ec;
+      --bg-subtle: #efe8d8;
+      --text-primary: #2c241b;
+      --text-secondary: #5c4e3e;
+      --text-muted: #7c6d5b;
+      --border-hairline: #dfd5c0;
+      --border-strong: #c8bba0;
+      --shadow-sm: 0 1px 2px rgba(44, 36, 27, 0.06);
+      --shadow-hover: 0 6px 18px rgba(44, 36, 27, 0.1);
+    }
+
+    html[data-theme="dark"] {
+      --bg-app: #121417;
+      --bg-surface: #1a1d22;
+      --bg-subtle: #22262d;
+      --text-primary: #e8eaed;
+      --text-secondary: #b5bcc6;
+      --text-muted: #8b949e;
+      --border-hairline: #2a2f37;
+      --border-strong: #3a414d;
+      --accent: #e05252;
+      --accent-soft: rgba(224, 82, 82, 0.14);
+      --accent-ring: rgba(224, 82, 82, 0.3);
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+      --shadow-hover: 0 8px 22px rgba(0, 0, 0, 0.42);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg-app);
+      color: var(--text-primary);
+      font-family: var(--font-ui);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: clamp(24px, 4vw, 48px) 20px 64px;
+    }
+
+    .header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 34px;
+      height: 34px;
+      flex: 0 0 auto;
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .brand-sub {
+      margin: 2px 0 0;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .theme-group {
+      display: inline-flex;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      border-radius: 8px;
+      padding: 3px;
+      gap: 2px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .theme-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font: inherit;
+      font-size: 12px;
+      padding: 5px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .theme-btn:hover { color: var(--text-primary); }
+
+    .theme-btn.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .search-box {
+      position: relative;
+      flex: 1 1 260px;
+    }
+
+    .search-box svg {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .search-input {
+      width: 100%;
+      height: 38px;
+      padding: 0 12px 0 36px;
+      border: 1px solid var(--border-hairline);
+      border-radius: 8px;
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      font: inherit;
+      font-size: 13.5px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-ring);
+    }
+
+    .sort-select {
+      height: 38px;
+      padding: 0 12px;
+      border: 1px solid var(--border-hairline);
+      border-radius: 8px;
+      background: var(--bg-surface);
+      color: var(--text-secondary);
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .tag-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 18px;
+    }
+
+    .tag-pill {
+      border: 1px solid var(--border-hairline);
+      background: var(--bg-surface);
+      color: var(--text-secondary);
+      font: inherit;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .tag-pill:hover {
+      border-color: var(--border-strong);
+      color: var(--text-primary);
+    }
+
+    .tag-pill.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .stats-line {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .notice-banner {
+      margin-bottom: 14px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border-hairline);
+      background: var(--bg-surface);
+      color: var(--text-secondary);
+      font-size: 12.5px;
+    }
+
+    .paper-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .paper-card {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      border-radius: 10px;
+      padding: 18px 20px;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+
+    .paper-card:hover {
+      transform: translateY(-1px);
+      border-color: var(--border-strong);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .card-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .meta-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 1px 7px;
+      border-radius: 4px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 600;
+      font-size: 11.5px;
+    }
+
+    .meta-venue {
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .card-title-en {
+      margin: 0 0 4px;
+      font-family: var(--font-serif);
+      font-size: 17.5px;
+      font-weight: 700;
+      line-height: 1.35;
+      color: var(--text-primary);
+    }
+
+    .card-title-zh {
+      margin: 0 0 8px;
+      font-size: 14.5px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    .card-authors {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .card-summary {
+      margin: 8px 0 0;
+      font-size: 13px;
+      color: var(--text-secondary);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .card-tag {
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--bg-subtle);
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--text-muted);
+      background: var(--bg-surface);
+      border: 1px dashed var(--border-strong);
+      border-radius: 10px;
+      font-size: 13.5px;
+    }
+
+    .footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 600px) {
+      .header { flex-direction: column; align-items: stretch; }
+      .theme-group { align-self: flex-start; }
+      .paper-card { padding: 15px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="header">
+      <div class="brand">
+        <svg class="brand-icon" viewBox="0 0 64 64" aria-hidden="true">
+          <rect x="6" y="9" width="23" height="46" rx="5" fill="var(--accent)"/>
+          <rect x="35" y="9" width="23" height="46" rx="5" fill="var(--accent)" fill-opacity="0.58"/>
+        </svg>
+        <div>
+          <h1 class="brand-title">Universal Bilingual Reader</h1>
+          <p class="brand-sub">中英对照文献目录 · 点击任意条目开始阅读</p>
+        </div>
+      </div>
+      <div class="theme-group" role="group" aria-label="切换主题">
+        <button class="theme-btn" data-set-theme="light" type="button">浅色</button>
+        <button class="theme-btn" data-set-theme="sepia" type="button">护眼</button>
+        <button class="theme-btn" data-set-theme="dark" type="button">深色</button>
+      </div>
+    </header>
+
+    <section class="toolbar">
+      <div class="search-box">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input id="search-input" class="search-input" type="search" placeholder="搜索标题、作者、来源或标签..." autocomplete="off">
+      </div>
+      <select id="sort-select" class="sort-select" aria-label="排序方式">
+        <option value="default">按目录顺序</option>
+        <option value="date-desc">按日期：最新优先</option>
+        <option value="date-asc">按日期：最早优先</option>
+        <option value="title-asc">按标题：A → Z</option>
+      </select>
+    </section>
+
+    <div id="notice-banner" class="notice-banner" hidden></div>
+    <div id="tag-bar" class="tag-bar"></div>
+    <div id="stats-line" class="stats-line"></div>
+    <section id="paper-list" class="paper-list" aria-live="polite">
+      <div class="empty-state">正在加载目录...</div>
+    </section>
+
+    <footer class="footer">
+      Universal Bilingual Reader · Static GitHub Pages
+    </footer>
+  </main>
+
+  <script>
+    (() => {
+      const INDEX_URL = "papers.json";
+      const DEFAULT_DIR = "papers";
+      const PREFS_KEY = "br_v1:global:prefs";
+      const META_CACHE_PREFIX = "br_v1:index_meta:";
+
+      // 主题同步：优先读取与阅读器共享的 br_v1:global:prefs
+      function loadTheme() {
+        try {
+          const raw = localStorage.getItem(PREFS_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && ["light", "sepia", "dark"].includes(parsed.theme)) {
+              return parsed.theme;
+            }
+          }
+        } catch {}
+        return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      }
+
+      function applyTheme(theme, persist) {
+        document.documentElement.setAttribute("data-theme", theme);
+        document.querySelectorAll("[data-set-theme]").forEach(btn => {
+          btn.classList.toggle("active", btn.dataset.setTheme === theme);
+        });
+        if (persist) {
+          try {
+            const existing = JSON.parse(localStorage.getItem(PREFS_KEY) || "{}");
+            existing.theme = theme;
+            localStorage.setItem(PREFS_KEY, JSON.stringify(existing));
+          } catch {}
+        }
+      }
+
+      document.querySelectorAll("[data-set-theme]").forEach(btn => {
+        btn.addEventListener("click", () => applyTheme(btn.dataset.setTheme, true));
+      });
+      applyTheme(loadTheme(), false);
+
+      function escHtml(str) {
+        return String(str || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      // 从 HTML 片段中按括号匹配精确提取 <script id="paper-data"> 内的 "meta": { ... }
+      function extractMetaFromHtmlChunk(chunk) {
+        const tagMatch = chunk.match(/<script[^>]*\bid=["']paper-data["'][^>]*>/i);
+        if (!tagMatch) return null;
+        const startPos = tagMatch.index + tagMatch[0].length;
+        const metaKeyMatch = chunk.slice(startPos).match(/"meta"\s*:\s*\{/);
+        if (!metaKeyMatch) return null;
+        const objStart = startPos + metaKeyMatch.index + metaKeyMatch[0].length - 1;
+        let depth = 0;
+        let inStr = false;
+        let escaped = false;
+        for (let i = objStart; i < chunk.length; i++) {
+          const ch = chunk[i];
+          if (inStr) {
+            if (escaped) {
+              escaped = false;
+            } else if (ch === "\\") {
+              escaped = true;
+            } else if (ch === '"') {
+              inStr = false;
+            }
+          } else {
+            if (ch === '"') {
+              inStr = true;
+            } else if (ch === "{") {
+              depth++;
+            } else if (ch === "}") {
+              depth--;
+              if (depth === 0) {
+                try {
+                  return JSON.parse(chunk.slice(objStart, i + 1));
+                } catch {
+                  return null;
+                }
+              }
+            }
+          }
+        }
+        return null;
+      }
+
+      function extractTitleTag(chunk) {
+        const m = chunk.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+        return m ? m[1].replace(/\s+/g, " ").trim() : "";
+      }
+
+      function formatAuthors(rawAuthors) {
+        if (Array.isArray(rawAuthors)) {
+          return rawAuthors.map(a => (typeof a === "string" ? a : (a && a.name) || "")).filter(Boolean).join(", ");
+        }
+        return typeof rawAuthors === "string" ? rawAuthors.trim() : "";
+      }
+
+      function parseTags(rawTags, subjectsStr) {
+        const list = [];
+        if (Array.isArray(rawTags)) {
+          rawTags.forEach(t => { const s = String(t || "").trim(); if (s) list.push(s); });
+        }
+        if (!list.length && subjectsStr) {
+          String(subjectsStr).split(/[,;、]+/).forEach(t => {
+            const s = t.trim();
+            if (s) list.push(s);
+          });
+        }
+        return Array.from(new Set(list));
+      }
+
+      // 流式读取论文 HTML：拿到 meta 对象后立即中断传输，避免下载整篇含图大文件
+      async function fetchHtmlMeta(href) {
+        const cacheKey = META_CACHE_PREFIX + href;
+        try {
+          const cached = sessionStorage.getItem(cacheKey);
+          if (cached) return JSON.parse(cached);
+        } catch {}
+
+        const res = await fetch(href);
+        if (!res.ok) return null;
+
+        let meta = null;
+        let fallbackTitle = "";
+        if (res.body && typeof res.body.getReader === "function") {
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder("utf-8");
+          let acc = "";
+          const MAX_BYTES = 512 * 1024;
+          let readBytes = 0;
+          try {
+            while (readBytes < MAX_BYTES) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              readBytes += value.byteLength;
+              acc += decoder.decode(value, { stream: true });
+              if (!fallbackTitle) fallbackTitle = extractTitleTag(acc);
+              meta = extractMetaFromHtmlChunk(acc);
+              if (meta) {
+                reader.cancel().catch(() => {});
+                break;
+              }
+            }
+          } catch {}
+        } else {
+          const fullText = await res.text();
+          fallbackTitle = extractTitleTag(fullText);
+          meta = extractMetaFromHtmlChunk(fullText);
+        }
+
+        const result = meta || (fallbackTitle ? { titleEn: fallbackTitle } : null);
+        if (result) {
+          try { sessionStorage.setItem(cacheKey, JSON.stringify(result)); } catch {}
+        }
+        return result;
+      }
+
+      function normalizeEntry(rawItem, dir, idx) {
+        const item = typeof rawItem === "string" ? { file: rawItem } : (rawItem || {});
+        const file = String(item.file || "").trim();
+        const cleanDir = String(dir || "").replace(/^\/+|\/+$/g, "");
+        const isExternal = /^(https?:)?\/\//i.test(file) || file.includes("/");
+        const href = isExternal ? file : (cleanDir ? `${cleanDir}/${file}` : file);
+        return {
+          idx,
+          file,
+          href,
+          titleEn: String(item.titleEn || item.title || "").trim(),
+          titleZh: String(item.titleZh || "").trim(),
+          authors: formatAuthors(item.authors),
+          sourceLabel: String(item.sourceLabel || "").trim(),
+          venue: String(item.venue || "").trim(),
+          date: String(item.date || "").trim(),
+          summary: String(item.summary || "").trim(),
+          tags: parseTags(item.tags, item.subjects)
+        };
+      }
+
+      function mergeMeta(entry, meta) {
+        if (!meta) return entry;
+        return {
+          ...entry,
+          titleEn: entry.titleEn || String(meta.titleEn || "").trim(),
+          titleZh: entry.titleZh || String(meta.titleZh || "").trim(),
+          authors: entry.authors || formatAuthors(meta.authors),
+          sourceLabel: entry.sourceLabel || String(meta.sourceLabel || "").trim(),
+          venue: entry.venue || String(meta.venue || "").trim(),
+          date: entry.date || String(meta.date || meta.submitted || "").trim(),
+          tags: entry.tags.length ? entry.tags : parseTags(null, meta.subjects)
+        };
+      }
+
+      let papers = [];
+      let activeTag = "ALL";
+      let searchQuery = "";
+      let sortBy = "default";
+
+      const noticeEl = document.getElementById("notice-banner");
+      const tagBarEl = document.getElementById("tag-bar");
+      const statsEl = document.getElementById("stats-line");
+      const listEl = document.getElementById("paper-list");
+      const searchEl = document.getElementById("search-input");
+      const sortEl = document.getElementById("sort-select");
+
+      function showNotice(msg) {
+        noticeEl.textContent = msg;
+        noticeEl.hidden = !msg;
+      }
+
+      function renderTags() {
+        const allTags = Array.from(new Set(papers.flatMap(p => p.tags || [])));
+        if (!allTags.length) {
+          tagBarEl.style.display = "none";
+          return;
+        }
+        tagBarEl.style.display = "flex";
+        const pills = [{ label: "全部", value: "ALL" }].concat(allTags.map(t => ({ label: t, value: t })));
+        tagBarEl.innerHTML = pills.map(p =>
+          `<button class="tag-pill${activeTag === p.value ? " active" : ""}" data-tag="${escHtml(p.value)}" type="button">${escHtml(p.label)}</button>`
+        ).join("");
+      }
+
+      function renderList() {
+        const q = searchQuery.trim().toLowerCase();
+        const filtered = papers.filter(p => {
+          if (activeTag !== "ALL" && !(p.tags || []).includes(activeTag)) return false;
+          if (!q) return true;
+          const haystack = [
+            p.file, p.titleEn, p.titleZh, p.authors, p.sourceLabel, p.venue, p.date, p.summary, (p.tags || []).join(" ")
+          ].join(" ").toLowerCase();
+          return haystack.includes(q);
+        });
+
+        filtered.sort((a, b) => {
+          if (sortBy === "date-desc") return String(b.date || "").localeCompare(String(a.date || ""));
+          if (sortBy === "date-asc") return String(a.date || "").localeCompare(String(b.date || ""));
+          if (sortBy === "title-asc") return String(a.titleEn || a.file).localeCompare(String(b.titleEn || b.file));
+          return a.idx - b.idx;
+        });
+
+        statsEl.textContent = filtered.length === papers.length
+          ? `共 ${papers.length} 篇文献`
+          : `筛选结果：${filtered.length} / ${papers.length} 篇文献`;
+
+        if (!filtered.length) {
+          listEl.innerHTML = `<div class="empty-state">没有匹配的文献。</div>`;
+          return;
+        }
+
+        listEl.innerHTML = filtered.map(p => {
+          const metaItems = [];
+          if (p.sourceLabel) metaItems.push(`<span class="meta-badge">${escHtml(p.sourceLabel)}</span>`);
+          if (p.venue) metaItems.push(`<span class="meta-venue">${escHtml(p.venue)}</span>`);
+          if (p.date) metaItems.push(`<span>${escHtml(p.date)}</span>`);
+
+          const primaryTitle = p.titleEn || p.titleZh || p.file;
+          const secondaryTitle = p.titleEn && p.titleZh ? p.titleZh : "";
+          const tagsHtml = (p.tags && p.tags.length)
+            ? `<div class="card-tags">${p.tags.map(t => `<span class="card-tag">${escHtml(t)}</span>`).join("")}</div>`
+            : "";
+
+          return `
+            <a class="paper-card" href="${escHtml(p.href)}">
+              ${metaItems.length ? `<div class="card-meta">${metaItems.join("")}</div>` : ""}
+              <h2 class="card-title-en">${escHtml(primaryTitle)}</h2>
+              ${secondaryTitle ? `<p class="card-title-zh">${escHtml(secondaryTitle)}</p>` : ""}
+              ${p.authors ? `<div class="card-authors">${escHtml(p.authors)}</div>` : ""}
+              ${p.summary ? `<p class="card-summary">${escHtml(p.summary)}</p>` : ""}
+              ${tagsHtml}
+            </a>
+          `;
+        }).join("");
+      }
+
+      async function init() {
+        try {
+          const res = await fetch(INDEX_URL, { cache: "no-cache" });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const raw = await res.json();
+          const dir = Array.isArray(raw) ? DEFAULT_DIR : (raw.dir != null ? raw.dir : DEFAULT_DIR);
+          const items = Array.isArray(raw) ? raw : (Array.isArray(raw.items) ? raw.items : []);
+          papers = items.map((it, idx) => normalizeEntry(it, dir, idx)).filter(p => p.file);
+
+          renderTags();
+          renderList();
+
+          // 并发流式读取各篇 HTML 的元信息，补全标题/作者/日期/标签
+          await Promise.all(papers.map(async (entry, i) => {
+            try {
+              const meta = await fetchHtmlMeta(entry.href);
+              if (meta) {
+                papers[i] = mergeMeta(papers[i], meta);
+                renderTags();
+                renderList();
+              }
+            } catch {}
+          }));
+        } catch (err) {
+          if (location.protocol === "file:") {
+            showNotice("当前通过本地 file:// 打开，浏览器会拦截自动读取 papers.json。部署到 GitHub Pages 或用本地 HTTP 服务（如 python -m http.server）预览即可正常加载。");
+          } else {
+            showNotice(`未能加载 ${INDEX_URL}（${err.message}），请确认仓库根目录存在合法的 papers.json。`);
+          }
+          statsEl.textContent = "";
+          listEl.innerHTML = `<div class="empty-state">暂无可显示的目录条目。</div>`;
+        }
+      }
+
+      tagBarEl.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-tag]");
+        if (!btn) return;
+        activeTag = btn.dataset.tag;
+        renderTags();
+        renderList();
+      });
+
+      searchEl.addEventListener("input", () => {
+        searchQuery = searchEl.value;
+        renderList();
+      });
+
+      sortEl.addEventListener("change", () => {
+        sortBy = sortEl.value;
+        renderList();
+      });
+
+      init();
+    })();
+  </script>
+</body>
+</html>
