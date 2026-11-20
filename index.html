@@ -414,8 +414,8 @@
     (() => {
       const INDEX_URL = "papers.json";
       const DEFAULT_DIR = "papers";
-      const PREFS_KEY = "br_v1:global:prefs";
-      const META_CACHE_PREFIX = "br_v1:index_meta:";
+      const PREFS_KEY = "ubr_v1:global:prefs";
+      const META_CACHE_PREFIX = "ubr_v1:index_meta:";
 
       // 主题同步：优先读取与阅读器共享的 br_v1:global:prefs
       function loadTheme() {
@@ -575,11 +575,15 @@
         const item = typeof rawItem === "string" ? { file: rawItem } : (rawItem || {});
         const file = String(item.file || "").trim();
         const cleanDir = String(dir || "").replace(/^\/+|\/+$/g, "");
-        const isExternal = /^(https?:)?\/\//i.test(file) || file.includes("/");
-        const href = isExternal ? file : (cleanDir ? `${cleanDir}/${file}` : file);
+        const isExternal = /^(https?:)?\/\//i.test(file);
+        const relPath = isExternal ? file : ((file.startsWith(cleanDir + "/") || !cleanDir) ? file : `${cleanDir}/${file}`);
+        const isHtml = /\.html?($|\?)/i.test(file);
+        const href = (isExternal || isHtml) ? relPath : `reader.html?doc=${encodeURIComponent(relPath)}`;
         return {
           idx,
           file,
+          relPath,
+          isHtml,
           href,
           titleEn: String(item.titleEn || item.title || "").trim(),
           titleZh: String(item.titleZh || "").trim(),
@@ -700,10 +704,11 @@
           renderTags();
           renderList();
 
-          // 并发流式读取各篇 HTML 的元信息，补全标题/作者/日期/标签
+          // 若 papers.json 仅写了 .html 文件名，自动流式补全元信息；由 GitHub Actions 生成的富索引直接零额外请求秒开
           await Promise.all(papers.map(async (entry, i) => {
+            if (!entry.isHtml || entry.titleEn) return;
             try {
-              const meta = await fetchHtmlMeta(entry.href);
+              const meta = await fetchHtmlMeta(entry.relPath);
               if (meta) {
                 papers[i] = mergeMeta(papers[i], meta);
                 renderTags();
