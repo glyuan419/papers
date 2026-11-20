@@ -1,8 +1,7 @@
-const CACHE_NAME = "ubr-pwa-v2.0.0";
+const CACHE_NAME = "ubr-pwa-v2.1.0";
 const SHELL_URLS = [
   "./",
   "./index.html",
-  "./reader.html",
   "./catalog.json",
   "./manifest.webmanifest",
   "./icon-192.png",
@@ -37,7 +36,6 @@ self.addEventListener("fetch", (event) => {
   const isShell = isSameOrigin && (
     url.pathname.endsWith("/") ||
     url.pathname.endsWith("/index.html") ||
-    url.pathname.endsWith("/reader.html") ||
     url.pathname.endsWith("/catalog.json") ||
     url.pathname.endsWith("/manifest.webmanifest")
   );
