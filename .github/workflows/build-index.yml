@@ -1,0 +1,118 @@
+name: Auto-Unpack Kit, Build Catalog & Deploy Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Assemble _site (apply latest kit in updates/ + preserve library/)
+        run: |
+          python3 - << 'PY'
+          import os, re, shutil, zipfile
+
+          SITE = "_site"
+          if os.path.exists(SITE):
+              shutil.rmtree(SITE)
+          os.makedirs(SITE, exist_ok=True)
+
+          # 1. Copy repo static files & existing library/ into _site/
+          SKIP_TOP = {".git", ".github", "_site", "updates", "__pycache__"}
+          for name in os.listdir("."):
+              if name in SKIP_TOP:
+                  continue
+              src = os.path.join(".", name)
+              dst = os.path.join(SITE, name)
+              if os.path.isdir(src):
+                  shutil.copytree(src, dst)
+              else:
+                  shutil.copy2(src, dst)
+
+          # Check if repo already has real items in library/
+          lib_dir = os.path.join(SITE, "library")
+          has_existing_lib = os.path.isdir(lib_dir) and any(
+              not f.startswith(".") for f in os.listdir(lib_dir)
+          )
+
+          # 2. If updates/ contains kit .zip(s), pick highest SemVer and overlay app shell
+          if os.path.isdir("updates"):
+              zips = [f for f in os.listdir("updates") if f.lower().endswith(".zip") and not f.startswith(".")]
+              def ver_key(fname):
+                  m = re.search(r"v(\d+)\.(\d+)\.(\d+)", fname)
+                  return (tuple(int(x) for x in m.groups()) if m else (0, 0, 0), fname)
+              if zips:
+                  latest = sorted(zips, key=ver_key)[-1]
+                  zip_path = os.path.join("updates", latest)
+                  print(f"[updates] Applying kit: {latest} (preserve existing library={has_existing_lib})")
+                  with zipfile.ZipFile(zip_path, "r") as zf:
+                      for member in zf.infolist():
+                          if member.is_dir():
+                              continue
+                          rel = member.filename.lstrip("./")
+                          if not rel or rel.startswith("__MACOSX/") or rel.startswith(".github/") or ".." in rel.split("/"):
+                              continue
+                          if has_existing_lib and rel.startswith("library/"):
+                              continue
+                          dest = os.path.join(SITE, rel)
+                          os.makedirs(os.path.dirname(dest) or SITE, exist_ok=True)
+                          with zf.open(member, "r") as src_f, open(dest, "wb") as dst_f:
+                              shutil.copyfileobj(src_f, dst_f)
+                  # Clean up legacy reader.html if present
+                  legacy_reader = os.path.join(SITE, "reader.html")
+                  if os.path.isfile(legacy_reader):
+                      os.remove(legacy_reader)
+
+          # Also support dropping a standalone Atlas .html directly into updates/ (only if no zip)
+          if os.path.isdir("updates") and not any(f.lower().endswith(".zip") for f in os.listdir("updates")):
+              htmls = sorted(f for f in os.listdir("updates") if f.lower().endswith(".html") and not f.startswith("."))
+              if htmls:
+                  print(f"[updates] Applying standalone HTML as index.html: {htmls[-1]}")
+                  shutil.copy2(os.path.join("updates", htmls[-1]), os.path.join(SITE, "index.html"))
+          PY
+
+      - name: Generate catalog.json from _site/library/
+        working-directory: _site
+        run: python3 scripts/build_index.py
+
+      - name: Stamp PWA Service Worker cache version
+        working-directory: _site
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          if [ -f sw.js ]; then
+            sed -i -E "s/ubr-pwa-[A-Za-z0-9._-]+/ubr-pwa-${SHORT_SHA}/g" sw.js
+          fi
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "_site"
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
