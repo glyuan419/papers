@@ -1,4 +1,4 @@
-name: Auto-Unpack Kit, Build Catalog & Deploy Pages
+name: Clean-Room Build & Deploy GitHub Pages
 
 on:
   push:
@@ -29,7 +29,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Assemble _site (apply latest kit in updates/ + preserve library/)
+      - name: Clean-room assemble _site (latest kit in updates/ + repo library/)
         run: |
           python3 - << 'PY'
           import os, re, shutil, zipfile
@@ -39,58 +39,56 @@ jobs:
               shutil.rmtree(SITE)
           os.makedirs(SITE, exist_ok=True)
 
-          # 1. Copy repo static files & existing library/ into _site/
-          SKIP_TOP = {".git", ".github", "_site", "updates", "__pycache__"}
-          for name in os.listdir("."):
-              if name in SKIP_TOP:
-                  continue
-              src = os.path.join(".", name)
-              dst = os.path.join(SITE, name)
-              if os.path.isdir(src):
-                  shutil.copytree(src, dst)
-              else:
-                  shutil.copy2(src, dst)
-
-          # Check if repo already has real items in library/
-          lib_dir = os.path.join(SITE, "library")
-          has_existing_lib = os.path.isdir(lib_dir) and any(
-              not f.startswith(".") for f in os.listdir(lib_dir)
+          has_repo_lib = os.path.isdir("library") and any(
+              not f.startswith(".") for f in os.listdir("library")
           )
 
-          # 2. If updates/ contains kit .zip(s), pick highest SemVer and overlay app shell
+          kit_zips = []
           if os.path.isdir("updates"):
-              zips = [f for f in os.listdir("updates") if f.lower().endswith(".zip") and not f.startswith(".")]
+              kit_zips = [f for f in os.listdir("updates") if f.lower().endswith(".zip") and not f.startswith(".")]
+
+          if kit_zips:
+              # Clean-room mode: build _site strictly from the latest kit ZIP + repo's library/ (& optional CNAME)
               def ver_key(fname):
                   m = re.search(r"v(\d+)\.(\d+)\.(\d+)", fname)
                   return (tuple(int(x) for x in m.groups()) if m else (0, 0, 0), fname)
-              if zips:
-                  latest = sorted(zips, key=ver_key)[-1]
-                  zip_path = os.path.join("updates", latest)
-                  print(f"[updates] Applying kit: {latest} (preserve existing library={has_existing_lib})")
-                  with zipfile.ZipFile(zip_path, "r") as zf:
-                      for member in zf.infolist():
-                          if member.is_dir():
-                              continue
-                          rel = member.filename.lstrip("./")
-                          if not rel or rel.startswith("__MACOSX/") or rel.startswith(".github/") or ".." in rel.split("/"):
-                              continue
-                          if has_existing_lib and rel.startswith("library/"):
-                              continue
-                          dest = os.path.join(SITE, rel)
-                          os.makedirs(os.path.dirname(dest) or SITE, exist_ok=True)
-                          with zf.open(member, "r") as src_f, open(dest, "wb") as dst_f:
-                              shutil.copyfileobj(src_f, dst_f)
-                  # Clean up legacy reader.html if present
-                  legacy_reader = os.path.join(SITE, "reader.html")
-                  if os.path.isfile(legacy_reader):
-                      os.remove(legacy_reader)
-
-          # Also support dropping a standalone Atlas .html directly into updates/ (only if no zip)
-          if os.path.isdir("updates") and not any(f.lower().endswith(".zip") for f in os.listdir("updates")):
-              htmls = sorted(f for f in os.listdir("updates") if f.lower().endswith(".html") and not f.startswith("."))
-              if htmls:
-                  print(f"[updates] Applying standalone HTML as index.html: {htmls[-1]}")
-                  shutil.copy2(os.path.join("updates", htmls[-1]), os.path.join(SITE, "index.html"))
+              latest = sorted(kit_zips, key=ver_key)[-1]
+              zip_path = os.path.join("updates", latest)
+              print(f"[clean-room] Unpacking kit: {latest} (use repo library={has_repo_lib})")
+              with zipfile.ZipFile(zip_path, "r") as zf:
+                  for member in zf.infolist():
+                      if member.is_dir():
+                          continue
+                      rel = member.filename.lstrip("./")
+                      if not rel or rel.startswith("__MACOSX/") or rel.startswith(".github/") or ".." in rel.split("/"):
+                          continue
+                      if has_repo_lib and rel.startswith("library/"):
+                          continue
+                      dest = os.path.join(SITE, rel)
+                      os.makedirs(os.path.dirname(dest) or SITE, exist_ok=True)
+                      with zf.open(member, "r") as src_f, open(dest, "wb") as dst_f:
+                          shutil.copyfileobj(src_f, dst_f)
+              if has_repo_lib:
+                  shutil.copytree("library", os.path.join(SITE, "library"), dirs_exist_ok=True)
+              if os.path.isfile("CNAME"):
+                  shutil.copy2("CNAME", os.path.join(SITE, "CNAME"))
+          else:
+              # Fallback mode (no kit ZIP in updates/): copy repo root static files + optional standalone HTML
+              SKIP_TOP = {".git", ".github", "_site", "updates", "__pycache__"}
+              for name in os.listdir("."):
+                  if name in SKIP_TOP:
+                      continue
+                  src = os.path.join(".", name)
+                  dst = os.path.join(SITE, name)
+                  if os.path.isdir(src):
+                      shutil.copytree(src, dst)
+                  else:
+                      shutil.copy2(src, dst)
+              if os.path.isdir("updates"):
+                  htmls = sorted(f for f in os.listdir("updates") if f.lower().endswith(".html") and not f.startswith("."))
+                  if htmls:
+                      print(f"[fallback] Applying standalone HTML as index.html: {htmls[-1]}")
+                      shutil.copy2(os.path.join("updates", htmls[-1]), os.path.join(SITE, "index.html"))
           PY
 
       - name: Generate catalog.json from _site/library/
