@@ -2,7 +2,7 @@
 
 在线访问：[https://glyuan419.github.io/universal_bilingual_reader/](https://www.google.com/search?q=https://glyuan419.github.io/universal_bilingual_reader/)
 
-**Universal Bilingual Reader** 是一个离线优先的通用中英双语阅读器器，支持以 PWA 形式安装为 Android 应用。
+**Universal Bilingual Reader** 是一个离线优先的通用中英双语阅读器，支持以 PWA 形式安装为 Android 应用。
 
 ## 仓库目录结构
 
