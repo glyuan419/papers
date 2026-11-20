@@ -1,8 +1,9 @@
-const CACHE_NAME = "ubr-pwa-v1";
+const CACHE_NAME = "ubr-pwa-v2.0.0";
 const SHELL_URLS = [
   "./",
   "./index.html",
-  "./papers.json",
+  "./reader.html",
+  "./catalog.json",
   "./manifest.webmanifest",
   "./icon-192.png",
   "./icon-512.png"
@@ -30,19 +31,18 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(req.url);
   const isSameOrigin = url.origin === self.location.origin;
-  const isKatexCdn = url.hostname === "cdn.jsdelivr.net" && url.pathname.includes("/katex@");
+  const isCdnDep = url.hostname === "cdn.jsdelivr.net" && (url.pathname.includes("/katex@") || url.pathname.includes("/jszip@"));
+  if (!isSameOrigin && !isCdnDep) return;
 
-  if (!isSameOrigin && !isKatexCdn) return;
-
-  const isIndexOrManifest = isSameOrigin && (
+  const isShell = isSameOrigin && (
     url.pathname.endsWith("/") ||
     url.pathname.endsWith("/index.html") ||
-    url.pathname.endsWith("/papers.json") ||
+    url.pathname.endsWith("/reader.html") ||
+    url.pathname.endsWith("/catalog.json") ||
     url.pathname.endsWith("/manifest.webmanifest")
   );
 
-  if (isIndexOrManifest) {
-    // Network-first: always pick up newly added papers when online, fall back to cache offline
+  if (isShell) {
     event.respondWith(
       fetch(req)
         .then((res) => {
@@ -57,7 +57,6 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Stale-while-revalidate for paper HTMLs & KaTeX CDN assets
   event.respondWith(
     caches.match(req).then((cached) => {
       const networkFetch = fetch(req)

@@ -372,7 +372,7 @@
         </svg>
         <div>
           <h1 class="brand-title">Universal Bilingual Reader</h1>
-          <p class="brand-sub">中英对照文献目录 · 点击任意条目开始阅读</p>
+          <p class="brand-sub">中英双语阅读馆藏 · 点击任意条目开始阅读</p>
         </div>
       </div>
       <div class="theme-group" role="group" aria-label="切换主题">
@@ -412,8 +412,8 @@
 
   <script>
     (() => {
-      const INDEX_URL = "papers.json";
-      const DEFAULT_DIR = "papers";
+      const INDEX_URL = "catalog.json";
+      const DEFAULT_DIR = "library";
       const PREFS_KEY = "ubr_v1:global:prefs";
       const META_CACHE_PREFIX = "ubr_v1:index_meta:";
 
@@ -659,11 +659,11 @@
         });
 
         statsEl.textContent = filtered.length === papers.length
-          ? `共 ${papers.length} 篇文献`
-          : `筛选结果：${filtered.length} / ${papers.length} 篇文献`;
+          ? `共 ${papers.length} 篇馆藏`
+          : `筛选结果：${filtered.length} / ${papers.length} 篇`;
 
         if (!filtered.length) {
-          listEl.innerHTML = `<div class="empty-state">没有匹配的文献。</div>`;
+          listEl.innerHTML = `<div class="empty-state">没有匹配的条目。</div>`;
           return;
         }
 
@@ -718,9 +718,9 @@
           }));
         } catch (err) {
           if (location.protocol === "file:") {
-            showNotice("当前通过本地 file:// 打开，浏览器会拦截自动读取 papers.json。部署到 GitHub Pages 或用本地 HTTP 服务（如 python -m http.server）预览即可正常加载。");
+            showNotice("当前通过本地 file:// 打开，浏览器会拦截自动读取 catalog.json。部署到 GitHub Pages 或用本地 HTTP 服务（如 python -m http.server）预览即可正常加载。");
           } else {
-            showNotice(`未能加载 ${INDEX_URL}（${err.message}），请确认仓库根目录存在合法的 papers.json。`);
+            showNotice(`未能加载 ${INDEX_URL}（${err.message}），请确认仓库根目录存在合法的 catalog.json。`);
           }
           statsEl.textContent = "";
           listEl.innerHTML = `<div class="empty-state">暂无可显示的目录条目。</div>`;
